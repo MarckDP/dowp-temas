@@ -1,0 +1,131 @@
+# Revisa un tema del buzón y, si pasa, abre un pull request para aprobarlo a mano.
+#
+# El archivo viene de cualquiera. Por eso está separado en trabajos:
+#   - descargar: tiene permiso de escritura para leer el borrador, y nunca abre el archivo.
+#   - validar: abre el archivo con el código de main, sin secretos ni permisos de escritura.
+#   - crear-pr: usa solo lo que dejó el validador.
+#   - limpiar: borra el archivo del buzón, pase lo que pase.
+name: Revisar tema
+
+on:
+  workflow_dispatch:
+    inputs:
+      archivo:
+        description: "Nombre del archivo en el borrador buzon"
+        required: true
+  repository_dispatch:
+    types: [tema-subido]
+
+permissions: {}
+
+jobs:
+  descargar:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    outputs:
+      asset_id: ${{ steps.buscar.outputs.asset_id }}
+    steps:
+      - name: Buscar el archivo en el buzón
+        id: buscar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ARCHIVO: ${{ github.event.inputs.archivo || github.event.client_payload.archivo }}
+        run: |
+          if ! printf '%s' "$ARCHIVO" | grep -Eq '^[A-Za-z0-9._-]{1,100}$'; then
+            echo "Nombre de archivo no válido"; exit 1
+          fi
+          gh api "repos/$REPO/releases" --paginate > releases.json
+          ASSET=$(jq -c --arg n "$ARCHIVO" '[.[] | select(.tag_name == "buzon" and .draft) | .assets[] | select(.name == $n)][0]' releases.json)
+          if [ -z "$ASSET" ] || [ "$ASSET" = "null" ]; then
+            echo "No está en el buzón"; exit 1
+          fi
+          SIZE=$(printf '%s' "$ASSET" | jq -r .size)
+          ID=$(printf '%s' "$ASSET" | jq -r .id)
+          echo "asset_id=$ID" >> "$GITHUB_OUTPUT"
+          if [ "$SIZE" -gt 20971520 ]; then
+            echo "Pasa de 20 MB"; exit 1
+          fi
+          mkdir entrada
+          gh api -H "Accept: application/octet-stream" "repos/$REPO/releases/assets/$ID" > entrada/tema.bin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: entrada
+          path: entrada/tema.bin
+          retention-days: 1
+
+  validar:
+    needs: descargar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install --disable-pip-version-check "pillow==12.3.0"
+      - uses: actions/download-artifact@v4
+        with:
+          name: entrada
+          path: entrada
+      - name: Validar
+        run: python tools/validar_tema.py entrada/tema.bin salida
+      - uses: actions/upload-artifact@v4
+        with:
+          name: salida
+          path: salida
+          retention-days: 1
+
+  crear-pr:
+    needs: validar
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: salida
+          path: salida
+      - name: Abrir el pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          ID=$(jq -r .id salida/info.json)
+          if ! printf '%s' "$ID" | grep -Eq '^[a-z0-9-]{1,50}$'; then
+            echo "Identificador no válido"; exit 1
+          fi
+          RAMA="tema/$ID"
+          mkdir -p temas
+          cp -r "salida/$ID" "temas/$ID"
+          python3 tools/cuerpo_pr.py salida/info.json "$REPO" "$RAMA" > cuerpo.md
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$RAMA"
+          git add "temas/$ID"
+          git commit -m "Tema: $ID"
+          git push origin "$RAMA"
+          gh pr create --base main --head "$RAMA" --title "Tema: $ID" --body-file cuerpo.md
+
+  limpiar:
+    needs: [descargar, validar, crear-pr]
+    if: always() && needs.descargar.outputs.asset_id != ''
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Borrar el archivo del buzón
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          ASSET_ID: ${{ needs.descargar.outputs.asset_id }}
+        run: gh api -X DELETE "repos/$REPO/releases/assets/$ASSET_ID"
