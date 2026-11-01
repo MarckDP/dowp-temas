@@ -4,7 +4,14 @@
 const REPO = "MarckDP/dowp-temas";
 // El tema (20 MB) y hasta 3 capturas (8 MB cada una); el Action comprueba cada parte.
 const MAX_BYTES = 45 * 1024 * 1024;
-const ORIGINS = ["https://marckdp.github.io", "http://localhost:8000"];
+const ORIGINS = ["https://marckdp.github.io"];
+// Por dirección: un freno simple. Vive en la memoria del Worker, así que puede reiniciarse.
+const IP_LIMIT = 5;
+const IP_WINDOW_MS = 60 * 60 * 1000;
+const uploadsByIp = new Map();
+// El freno firme: con tantos temas por revisar o en proceso, no se aceptan más.
+const MAX_OPEN_REVIEWS = 25;
+const MAX_PENDING_FILES = 10;
 
 function reply(request, body, status = 200) {
   const origin = request.headers.get("Origin");
@@ -14,6 +21,18 @@ function reply(request, body, status = 200) {
     headers["Vary"] = "Origin";
   }
   return new Response(JSON.stringify(body), { status, headers });
+}
+
+function recentUploads(ip, now) {
+  const recent = (uploadsByIp.get(ip) || []).filter((time) => now - time < IP_WINDOW_MS);
+  uploadsByIp.set(ip, recent);
+  return recent;
+}
+
+async function reviewQueueFull(inbox, github) {
+  if (inbox.assets.filter((a) => a.name.startsWith("tema-")).length >= MAX_PENDING_FILES) return true;
+  const open = await fetch(`https://api.github.com/repos/${REPO}/pulls?state=open&per_page=${MAX_OPEN_REVIEWS}`, { headers: github });
+  return !open.ok || (await open.json()).length >= MAX_OPEN_REVIEWS;
 }
 
 async function humanCheck(token, ip, secret) {
@@ -94,14 +113,19 @@ export default {
     if (!size) return reply(request, { error: "vacio" }, 400);
     if (size > MAX_BYTES) return reply(request, { error: "grande" }, 413);
 
+    const ip = request.headers.get("CF-Connecting-IP") || "";
+    const now = Date.now();
+    if (recentUploads(ip, now).length >= IP_LIMIT) return reply(request, { error: "limite" }, 429);
+
     const token = request.headers.get("X-Turnstile");
-    if (!token || !(await humanCheck(token, request.headers.get("CF-Connecting-IP"), env.TURNSTILE_SECRET))) {
+    if (!token || !(await humanCheck(token, ip, env.TURNSTILE_SECRET))) {
       return reply(request, { error: "antibots" }, 403);
     }
 
     const github = githubHeaders(env);
     const inbox = await findInbox(github);
     if (!inbox) return reply(request, { error: "buzon" }, 502);
+    if (await reviewQueueFull(inbox, github)) return reply(request, { error: "ocupado" }, 503);
 
     const code = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
     const name = `tema-${code}.bin`;
@@ -115,6 +139,7 @@ export default {
       body: request.body,
     });
     if (!upload.ok) return reply(request, { error: "subida" }, 502);
+    recentUploads(ip, now).push(now);
 
     const notify = await fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
       method: "POST",
