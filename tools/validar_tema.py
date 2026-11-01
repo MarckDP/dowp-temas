@@ -330,7 +330,7 @@ def validate(path: str, output: str, nick: str = "") -> dict:
         raise Rechazado("El tema pasa de 20 MB.")
     if zipfile.is_zipfile(path):
         theme, images, frames = read_package(path)
-        content, file_name = None, "tema.dthmp"
+        content, extension = None, ".dthmp"
     else:
         if size > MAX_JSON_BYTES:
             raise Rechazado("El archivo no es un tema válido.")
@@ -340,11 +340,14 @@ def validate(path: str, output: str, nick: str = "") -> dict:
         except (UnicodeDecodeError, ValueError):
             raise Rechazado("El archivo no es un tema válido.")
         theme, images, frames = clean_theme(raw), {}, {}
-        content, file_name = None, "tema.json"
+        content, extension = None, ".json"
     name = theme["meta"]["nombre"] or "Tema sin nombre"
     theme["meta"]["nombre"] = name
     theme["meta"]["autor"] = clean_text(nick, 30)  # quien lo sube; lo del archivo no se puede comprobar
-    if file_name == "tema.dthmp":
+    # Con el nombre del tema, que es como se descarga. "info" chocaría con info.json.
+    stem = slugify(name)
+    file_name = f"{'tema-info' if stem == 'info' else stem}{extension}"
+    if extension == ".dthmp":
         content = build_package(theme, images)
     else:
         content = json.dumps(theme, ensure_ascii=False, indent=2).encode("utf-8")

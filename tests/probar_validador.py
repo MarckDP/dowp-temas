@@ -88,7 +88,7 @@ evil = {"meta": {"nombre": "<b>../../Windows/evil</b>", "autor": "<script>alert(
         "apariencia": {"font_family": 'x"; }', "panel_opacity": 99999, "places": {"general": {"file": "../../x.jpg"}}, "extra": 1}}
 out = tempfile.mkdtemp(dir=TMP)
 info = v.validate(package([("manifest.json", MAN), ("tema.json", json.dumps(evil))]), out)
-data = json.loads(zipfile.ZipFile(os.path.join(out, info["id"], "tema.dthmp")).read("tema.json"))
+data = json.loads(zipfile.ZipFile(os.path.join(out, info["id"], info["archivo"])).read("tema.json"))
 check("JSON hostil: solo quedan claves conocidas", set(data) == {"meta", "colores", "formas", "apariencia"})
 check("JSON hostil: colores limpios", list(data["colores"]) == ["acento_primario"])
 check("JSON hostil: formas limpias", data["formas"] == {"radio_chico": 3})
@@ -97,7 +97,7 @@ check("JSON hostil: sin marcado ni rutas en el id", "<" not in data["meta"]["nom
 
 out = tempfile.mkdtemp(dir=TMP)
 info = v.validate(package(BASE + [("imagenes/general.jpg", image() + b"PK\x03\x04 script"), ("imagenes/previews.png", image("PNG", (2000, 2000), "RGBA"))]), out)
-z = zipfile.ZipFile(os.path.join(out, info["id"], "tema.dthmp"))
+z = zipfile.ZipFile(os.path.join(out, info["id"], info["archivo"]))
 check("lo pegado tras la imagen desaparece", b"script" not in z.read("imagenes/general.jpg"))
 check("la vista previa pasa a WebP de 1080 px", Image.open(io.BytesIO(z.read("imagenes/previews.webp"))).size == (1080, 1080))
 check("genera vista.jpg", Image.open(os.path.join(out, info["id"], "vista.jpg")).size == (640, 360))
@@ -107,7 +107,7 @@ path = os.path.join(TMP, "t.json")
 with open(path, "w", encoding="utf-8") as f:
     json.dump(GOOD, f)
 info = v.validate(path, out)
-check("acepta un .json", info["archivo"] == "tema.json")
+check("acepta un .json, con el nombre del tema", info["archivo"] == "prueba.json")
 
 body = subprocess.run([sys.executable, os.path.join(HERE, "tools", "cuerpo_pr.py"), os.path.join(out, "info.json"), "a/b", "tema/x"], capture_output=True, text=True, encoding="utf-8")
 check("el texto del pull request se genera", body.returncode == 0 and "vista.jpg" in body.stdout)
@@ -122,6 +122,16 @@ info = v.validate(path, out, "  <b>Nick</b> " + "x" * 50)
 check("el nick se limpia y se recorta", info["autor"] == "bNick/b " + "x" * 22)
 out = tempfile.mkdtemp(dir=TMP)
 check("sin nick no queda el autor del archivo", v.validate(package(BASE + [("imagenes/general.jpg", image())]), out)["autor"] == "")
+
+out = tempfile.mkdtemp(dir=TMP)
+named = dict(GOOD, meta={"nombre": "Info"})
+info = v.validate(package([("manifest.json", MAN), ("tema.json", json.dumps(named))]), out)
+check("un tema llamado Info no pisa info.json", info["archivo"] == "tema-info.dthmp" and os.path.isfile(os.path.join(out, info["id"], "info.json")))
+out = tempfile.mkdtemp(dir=TMP)
+named = dict(GOOD, meta={"nombre": "../../Ñandú <b>Rojo</b>"})
+info = v.validate(package([("manifest.json", MAN), ("tema.json", json.dumps(named))]), out)
+check("el nombre del archivo no permite rutas", "/" not in info["archivo"] and ".." not in info["archivo"].replace(".dthmp", ""))
+
 
 def envelope(theme, pictures, header=None, extra=b""):
     head = json.dumps(header or {"tema": len(theme), "capturas": [len(c) for c in pictures]}).encode()
