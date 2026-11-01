@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Prueba de subida de temas</title>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+<style>body{font-family:sans-serif;max-width:520px;margin:40px auto;line-height:1.5}button{padding:8px 16px}#salida{margin-top:16px;font-weight:bold}</style>
+</head>
+<body>
+<h1>Prueba de subida de temas</h1>
+<p><input type="file" id="archivo" accept=".dthmp,.json"></p>
+<div class="cf-turnstile" data-sitekey="0x4AAAAAAFuoWc9Osjjjee-8"></div>
+<p><button id="subir">Subir tema</button></p>
+<div id="salida"></div>
+<script>
+const WORKER = "https://dowp-temas.nody18.workers.dev/";
+const MAX = 20 * 1024 * 1024;
+const salida = document.getElementById("salida");
+const mensajes = { grande: "El tema pasa de 20 MB.", antibots: "No se pudo comprobar que eres una persona.", origen: "Origen no permitido." };
+document.getElementById("subir").onclick = async () => {
+  const archivo = document.getElementById("archivo").files[0];
+  if (!archivo) { salida.textContent = "Elige un archivo."; return; }
+  if (!/\.(dthmp|json)$/i.test(archivo.name)) { salida.textContent = "Solo .dthmp o .json."; return; }
+  if (archivo.size > MAX) { salida.textContent = mensajes.grande; return; }
+  const token = turnstile.getResponse();
+  if (!token) { salida.textContent = "Espera la comprobación antibots."; return; }
+  salida.textContent = "Subiendo…";
+  try {
+    const r = await fetch(WORKER, { method: "POST", headers: { "Content-Type": "application/octet-stream", "X-Turnstile": token }, body: archivo });
+    const d = await r.json();
+    salida.textContent = d.ok ? "Recibido: tu tema queda en revisión." : (mensajes[d.error] || `Error: ${d.error}`);
+  } catch (e) {
+    salida.textContent = "No se pudo conectar: " + e.message;
+  }
+  turnstile.reset();
+};
+</script>
+</body>
+</html>
