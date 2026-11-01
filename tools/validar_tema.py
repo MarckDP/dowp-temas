@@ -1,7 +1,7 @@
 """Valida un tema subido y deja una copia limpia. Viene de cualquiera: nada se ejecuta ni se usa
 tal cual. Solo depende de Pillow, y corre en un trabajo sin secretos.
 
-    python tools/validar_tema.py ENTRADA CARPETA_DE_SALIDA
+    python tools/validar_tema.py ENTRADA CARPETA_DE_SALIDA [NICK]
 
 Sale con 0 y escribe en la salida la carpeta del tema e info.json; si se rechaza, sale con 1 y
 escribe el motivo en rechazo.txt. Las reglas son las de DowP (core/utils/theme_package.py e
@@ -16,6 +16,7 @@ import stat
 import sys
 import unicodedata
 import zipfile
+from datetime import datetime, timezone
 
 from PIL import Image, ImageOps
 
@@ -242,7 +243,7 @@ def build_package(theme: dict, images: dict) -> bytes:
     return out.getvalue()
 
 
-def validate(path: str, output: str) -> dict:
+def validate(path: str, output: str, nick: str = "") -> dict:
     size = os.path.getsize(path)
     if size > MAX_BYTES:
         raise Rechazado("El tema pasa de 20 MB.")
@@ -261,6 +262,7 @@ def validate(path: str, output: str) -> dict:
         content, file_name = None, "tema.json"
     name = theme["meta"]["nombre"] or "Tema sin nombre"
     theme["meta"]["nombre"] = name
+    theme["meta"]["autor"] = clean_text(nick, 30)  # quien lo sube; lo del archivo no se puede comprobar
     if file_name == "tema.dthmp":
         content = build_package(theme, images)
     else:
@@ -277,7 +279,8 @@ def validate(path: str, output: str) -> dict:
     with open(os.path.join(folder, "vista.jpg"), "wb") as f:
         f.write(make_preview(theme, frames))
     info = {"id": theme_id, "nombre": name, "autor": theme["meta"]["autor"], "archivo": file_name,
-            "bytes": len(content), "colores": len(theme["colores"]), "imagenes": sorted(images)}
+            "bytes": len(content), "colores": len(theme["colores"]), "imagenes": sorted(images),
+            "fecha": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
     with open(os.path.join(folder, "info.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=2)
     with open(os.path.join(output, "info.json"), "w", encoding="utf-8") as f:
@@ -289,7 +292,7 @@ def main() -> int:
     source, output = sys.argv[1], sys.argv[2]
     os.makedirs(output, exist_ok=True)
     try:
-        info = validate(source, output)
+        info = validate(source, output, sys.argv[3] if len(sys.argv) > 3 else "")
     except Rechazado as e:
         with open(os.path.join(output, "rechazo.txt"), "w", encoding="utf-8") as f:
             f.write(str(e))

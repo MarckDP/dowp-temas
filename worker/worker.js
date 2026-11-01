@@ -1,5 +1,6 @@
 // Recibe un tema del formulario, lo pasa tal cual al borrador "buzon" y avisa al Action.
 // Nunca abre el archivo: quien valida es el Action. Secretos: GITHUB_TOKEN y TURNSTILE_SECRET.
+// GET /estado/CODIGO dice en qué va un tema.
 const REPO = "MarckDP/dowp-temas";
 const MAX_BYTES = 20 * 1024 * 1024;
 const ORIGINS = ["https://marckdp.github.io", "http://localhost:8000"];
@@ -23,6 +24,48 @@ async function humanCheck(token, ip, secret) {
   return (await answer.json()).success === true;
 }
 
+function githubHeaders(env) {
+  return {
+    Authorization: `Bearer ${env.GITHUB_TOKEN}`,
+    Accept: "application/vnd.github+json",
+    "User-Agent": "dowp-temas-worker",
+  };
+}
+
+async function findInbox(github) {
+  const list = await fetch(`https://api.github.com/repos/${REPO}/releases`, { headers: github });
+  if (!list.ok) return null;
+  return (await list.json()).find((r) => r.tag_name === "buzon" && r.draft) || null;
+}
+
+async function readAsset(asset, github) {
+  // GitHub redirige a un almacén que no acepta el token: la segunda petición va sin él.
+  const first = await fetch(asset.url, { headers: { ...github, Accept: "application/octet-stream" }, redirect: "manual" });
+  const final = first.status >= 300 && first.status < 400 ? await fetch(first.headers.get("Location")) : first;
+  return final.ok ? final.json() : null;
+}
+
+async function themeState(request, env, code) {
+  const github = githubHeaders(env);
+  const inbox = await findInbox(github);
+  if (!inbox) return reply(request, { error: "buzon" }, 502);
+  const state = inbox.assets.find((a) => a.name === `estado-${code}.json`);
+  if (!state) {
+    const pending = inbox.assets.some((a) => a.name === `tema-${code}.bin`);
+    return reply(request, { estado: pending ? "procesando" : "desconocido" });
+  }
+  const data = await readAsset(state, github);
+  if (!data) return reply(request, { error: "buzon" }, 502);
+  if (data.estado !== "revision") return reply(request, { estado: data.estado, motivo: data.motivo || "" });
+  const owner = REPO.split("/")[0];
+  const pulls = await fetch(`https://api.github.com/repos/${REPO}/pulls?state=all&head=${owner}:tema/${data.tema}`, { headers: github });
+  if (!pulls.ok) return reply(request, { estado: "revision" });
+  const pull = (await pulls.json())[0];
+  if (pull && pull.merged_at) return reply(request, { estado: "publicado" });
+  if (pull && pull.state === "closed") return reply(request, { estado: "rechazado" });
+  return reply(request, { estado: "revision" });
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin");
@@ -33,11 +76,15 @@ export default {
         headers: {
           "Access-Control-Allow-Origin": origin,
           "Access-Control-Allow-Methods": "POST",
-          "Access-Control-Allow-Headers": "Content-Type, X-Turnstile",
+          "Access-Control-Allow-Headers": "Content-Type, X-Turnstile, X-Nick",
           "Access-Control-Max-Age": "86400",
           "Vary": "Origin",
         },
       });
+    }
+    if (request.method === "GET") {
+      const match = new URL(request.url).pathname.match(/^\/estado\/([A-F0-9]{8})$/);
+      return match ? themeState(request, env, match[1]) : reply(request, { error: "ruta" }, 404);
     }
     if (request.method !== "POST") return reply(request, { error: "metodo" }, 405);
     if (!ORIGINS.includes(origin)) return reply(request, { error: "origen" }, 403);
@@ -51,17 +98,16 @@ export default {
       return reply(request, { error: "antibots" }, 403);
     }
 
-    const github = {
-      Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-      Accept: "application/vnd.github+json",
-      "User-Agent": "dowp-temas-worker",
-    };
-    const list = await fetch(`https://api.github.com/repos/${REPO}/releases`, { headers: github });
-    if (!list.ok) return reply(request, { error: "buzon" }, 502);
-    const inbox = (await list.json()).find((r) => r.tag_name === "buzon" && r.draft);
+    const github = githubHeaders(env);
+    const inbox = await findInbox(github);
     if (!inbox) return reply(request, { error: "buzon" }, 502);
 
-    const name = `tema-${Date.now()}-${crypto.randomUUID().slice(0, 8)}.bin`;
+    const code = crypto.randomUUID().replaceAll("-", "").slice(0, 8).toUpperCase();
+    const name = `tema-${code}.bin`;
+    let nick = "";
+    try {
+      nick = decodeURIComponent(request.headers.get("X-Nick") || "").slice(0, 30);
+    } catch {}
     const upload = await fetch(`https://uploads.github.com/repos/${REPO}/releases/${inbox.id}/assets?name=${name}`, {
       method: "POST",
       headers: { ...github, "Content-Type": "application/octet-stream", "Content-Length": String(size) },
@@ -72,9 +118,9 @@ export default {
     const notify = await fetch(`https://api.github.com/repos/${REPO}/dispatches`, {
       method: "POST",
       headers: { ...github, "Content-Type": "application/json" },
-      body: JSON.stringify({ event_type: "tema-subido", client_payload: { archivo: name } }),
+      body: JSON.stringify({ event_type: "tema-subido", client_payload: { archivo: name, nick } }),
     });
     if (!notify.ok) return reply(request, { error: "aviso" }, 502);
-    return reply(request, { ok: true });
+    return reply(request, { ok: true, codigo: code });
   },
 };
