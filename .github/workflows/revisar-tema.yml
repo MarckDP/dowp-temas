@@ -105,6 +105,10 @@ jobs:
             echo "Identificador no válido"; exit 1
           fi
           RAMA="tema/$ID"
+          # El mismo archivo ya está publicado o en revisión: no hay nada que hacer.
+          if [ -d "temas/$ID" ] || git ls-remote --exit-code --heads origin "$RAMA" > /dev/null; then
+            echo "Ya está publicado o en revisión"; exit 0
+          fi
           mkdir -p temas
           cp -r "salida/$ID" "temas/$ID"
           python3 tools/cuerpo_pr.py salida/info.json "$REPO" "$RAMA" > cuerpo.md
