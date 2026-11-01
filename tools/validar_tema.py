@@ -21,6 +21,10 @@ from datetime import datetime, timezone
 from PIL import Image, ImageOps
 
 MAX_BYTES = 20 * 1024 * 1024
+MAX_CAPTURES = 3
+MAX_CAPTURE_BYTES = 8 * 1024 * 1024
+CAPTURE_SIDE = 1920
+ENVELOPE_MAGIC = b"DOWPENV1"
 MAX_JSON_BYTES = 1024 * 1024
 MAX_ENTRIES = 6
 QUALITY = 90
@@ -212,8 +216,81 @@ def color_at(theme: dict, key: str, fallback: str, index: int = 1) -> tuple:
     return tuple(int(match.group(1)[i:i + 2], 16) for i in (0, 2, 4)) if match else tuple(int(fallback[i:i + 2], 16) for i in (1, 3, 5))
 
 
+def split_envelope(path: str, folder: str) -> tuple:
+    """El formulario manda el tema y sus capturas juntos: DOWPENV1 + largo de la cabecera (4 bytes)
+    + {"tema": n, "capturas": [n, ...]} + los archivos seguidos. Sin esa marca, es un tema suelto.
+    Devuelve (ruta del tema, [bytes de cada captura])."""
+    with open(path, "rb") as f:
+        if f.read(len(ENVELOPE_MAGIC)) != ENVELOPE_MAGIC:
+            return path, []
+        size = int.from_bytes(f.read(4), "big")
+        if not 0 < size <= 1024:
+            raise Rechazado("El envío no es válido.")
+        try:
+            header = json.loads(f.read(size).decode("utf-8"))
+            theme_size, captures = header["tema"], header["capturas"]
+        except (UnicodeDecodeError, ValueError, KeyError, TypeError):
+            raise Rechazado("El envío no es válido.")
+        sizes = [theme_size] + captures if isinstance(captures, list) else []
+        if not sizes or not all(isinstance(n, int) and not isinstance(n, bool) and n > 0 for n in sizes):
+            raise Rechazado("El envío no es válido.")
+        if theme_size > MAX_BYTES:
+            raise Rechazado("El tema pasa de 20 MB.")
+        if len(captures) > MAX_CAPTURES:
+            raise Rechazado("Solo se aceptan hasta 3 capturas.")
+        if any(n > MAX_CAPTURE_BYTES for n in captures):
+            raise Rechazado("Cada captura puede pesar hasta 8 MB.")
+        theme_path = os.path.join(folder, "tema_recibido.bin")
+        content = f.read(theme_size)
+        if len(content) != theme_size:
+            raise Rechazado("El envío no es válido.")
+        with open(theme_path, "wb") as out:
+            out.write(content)
+        pictures = []
+        for n in captures:
+            picture = f.read(n)
+            if len(picture) != n:
+                raise Rechazado("El envío no es válido.")
+            pictures.append(picture)
+        if f.read(1):
+            raise Rechazado("El envío no es válido.")
+    return theme_path, pictures
+
+
+def clean_capture(content: bytes):
+    """Una captura: solo sus píxeles, sin transparencia ni metadatos."""
+    try:
+        with Image.open(io.BytesIO(content)) as im:
+            if im.format not in ("PNG", "JPEG", "WEBP"):
+                raise ValueError(im.format)
+            im.seek(0)
+            frame = ImageOps.exif_transpose(im).convert("RGBA")
+    except Exception:
+        raise Rechazado("Una de las capturas no es una imagen válida.")
+    frame.thumbnail((CAPTURE_SIDE, CAPTURE_SIDE), Image.Resampling.LANCZOS)
+    flat = Image.new("RGB", frame.size, (16, 16, 16))
+    flat.paste(frame, (0, 0), frame)
+    return flat
+
+
+def jpeg_bytes(image, quality: int = 85) -> bytes:
+    out = io.BytesIO()
+    image.save(out, "JPEG", quality=quality, optimize=True)
+    return out.getvalue()
+
+
+def sample_colors(theme: dict) -> list:
+    """Los colores principales, para mostrarlos en la ficha del tema."""
+    keys = ("fondo_principal", "fondo_secundario", "acento_primario", "boton_fondo_inicio", "texto_principal", "estado_exito")
+    colors = []
+    for key in keys:
+        red, green, blue = color_at(theme, key, "#808080")
+        colors.append(f"#{red:02x}{green:02x}{blue:02x}")
+    return colors
+
+
 def make_preview(theme: dict, frames: dict) -> bytes:
-    """Para revisar el tema en el pull request y mostrarlo en la galería."""
+    """La vista por defecto si el autor no sube capturas."""
     canvas = Image.new("RGB", (640, 360), color_at(theme, "fondo_principal", "#101010"))
     general = frames.get("general")
     if general is not None:
@@ -244,6 +321,10 @@ def build_package(theme: dict, images: dict) -> bytes:
 
 
 def validate(path: str, output: str, nick: str = "") -> dict:
+    os.makedirs(output, exist_ok=True)
+    source = path
+    path, pictures = split_envelope(path, output)
+    captures = [clean_capture(picture) for picture in pictures]
     size = os.path.getsize(path)
     if size > MAX_BYTES:
         raise Rechazado("El tema pasa de 20 MB.")
@@ -269,17 +350,28 @@ def validate(path: str, output: str, nick: str = "") -> dict:
         content = json.dumps(theme, ensure_ascii=False, indent=2).encode("utf-8")
     if len(content) > MAX_BYTES:
         raise Rechazado("El tema pasa de 20 MB.")
-    with open(path, "rb") as f:  # del original: el mismo archivo da siempre el mismo identificador
+    with open(source, "rb") as f:  # del original: el mismo envío da siempre el mismo identificador
         digest = hashlib.sha256(f.read()).hexdigest()[:8]
+    if path != source:
+        os.remove(path)
     theme_id = f"{slugify(name)}-{digest}"
     folder = os.path.join(output, theme_id)
     os.makedirs(folder)
     with open(os.path.join(folder, file_name), "wb") as f:
         f.write(content)
+    if captures:
+        cover = ImageOps.fit(captures[0], (640, 360), Image.Resampling.LANCZOS)
+        preview = jpeg_bytes(cover)
+    else:
+        preview = make_preview(theme, frames)
     with open(os.path.join(folder, "vista.jpg"), "wb") as f:
-        f.write(make_preview(theme, frames))
+        f.write(preview)
+    for number, capture in enumerate(captures, 1):
+        with open(os.path.join(folder, f"captura{number}.jpg"), "wb") as f:
+            f.write(jpeg_bytes(capture))
     info = {"id": theme_id, "nombre": name, "autor": theme["meta"]["autor"], "archivo": file_name,
             "bytes": len(content), "colores": len(theme["colores"]), "imagenes": sorted(images),
+            "capturas": len(captures), "muestra": sample_colors(theme),
             "fecha": datetime.now(timezone.utc).strftime("%Y-%m-%d")}
     with open(os.path.join(folder, "info.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=2)

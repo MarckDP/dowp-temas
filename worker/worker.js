@@ -2,7 +2,8 @@
 // Nunca abre el archivo: quien valida es el Action. Secretos: GITHUB_TOKEN y TURNSTILE_SECRET.
 // GET /estado/CODIGO dice en qué va un tema.
 const REPO = "MarckDP/dowp-temas";
-const MAX_BYTES = 20 * 1024 * 1024;
+// El tema (20 MB) y hasta 3 capturas (8 MB cada una); el Action comprueba cada parte.
+const MAX_BYTES = 45 * 1024 * 1024;
 const ORIGINS = ["https://marckdp.github.io", "http://localhost:8000"];
 
 function reply(request, body, status = 200) {
