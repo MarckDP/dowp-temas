@@ -49,8 +49,8 @@ jobs:
           ID=$(printf '%s' "$ASSET" | jq -r .id)
           echo "asset_id=$ID" >> "$GITHUB_OUTPUT"
           echo "release_id=$(jq -r '[.[] | select(.tag_name == "buzon" and .draft)][0].id' releases.json)" >> "$GITHUB_OUTPUT"
-          if [ "$SIZE" -gt 20971520 ]; then
-            echo "Pasa de 20 MB"; exit 1
+          if [ "$SIZE" -gt 47185920 ]; then
+            echo "Pasa de 45 MB"; exit 1
           fi
           mkdir entrada
           gh api -H "Accept: application/octet-stream" "repos/$REPO/releases/assets/$ID" > entrada/tema.bin

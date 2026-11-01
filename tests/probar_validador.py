@@ -123,6 +123,36 @@ check("el nick se limpia y se recorta", info["autor"] == "bNick/b " + "x" * 22)
 out = tempfile.mkdtemp(dir=TMP)
 check("sin nick no queda el autor del archivo", v.validate(package(BASE + [("imagenes/general.jpg", image())]), out)["autor"] == "")
 
+def envelope(theme, pictures, header=None, extra=b""):
+    head = json.dumps(header or {"tema": len(theme), "capturas": [len(c) for c in pictures]}).encode()
+    path = os.path.join(TMP, f"env{len(os.listdir(TMP))}.bin")
+    with open(path, "wb") as f:
+        f.write(v.ENVELOPE_MAGIC + len(head).to_bytes(4, "big") + head + theme + b"".join(pictures) + extra)
+    return path
+
+
+theme_bytes = json.dumps(GOOD).encode()
+out = tempfile.mkdtemp(dir=TMP)
+info = v.validate(envelope(theme_bytes, [image("PNG", (2600, 1400)), image("JPEG", (800, 450))]), out, "Marck")
+folder = os.path.join(out, info["id"])
+check("capturas: guarda las dos y una carátula", info["capturas"] == 2 and sorted(f for f in os.listdir(folder) if f.endswith(".jpg")) == ["captura1.jpg", "captura2.jpg", "vista.jpg"])
+check("capturas: reduce a 1920 px", max(Image.open(os.path.join(folder, "captura1.jpg")).size) == 1920)
+check("capturas: la carátula sale de la primera", Image.open(os.path.join(folder, "vista.jpg")).size == (640, 360))
+check("muestra de colores", len(info["muestra"]) == 6 and all(c.startswith("#") for c in info["muestra"]))
+check("no deja archivos temporales", not os.path.exists(os.path.join(out, "tema_recibido.bin")))
+hidden = image() + b"PK\x03\x04 script"
+out = tempfile.mkdtemp(dir=TMP)
+info = v.validate(envelope(theme_bytes, [hidden]), out)
+check("capturas: lo pegado desaparece", b"script" not in open(os.path.join(out, info["id"], "captura1.jpg"), "rb").read())
+rejected("captura que no es imagen", envelope(theme_bytes, [b"<svg onload=alert(1)>"]))
+rejected("exe como captura", envelope(theme_bytes, [b"MZ\x90\x00" + os.urandom(2048)]))
+rejected("más de 3 capturas", envelope(theme_bytes, [image()] * 4))
+rejected("captura de más de 8 MB", envelope(theme_bytes, [b"x"], {"tema": len(theme_bytes), "capturas": [v.MAX_CAPTURE_BYTES + 1]}))
+rejected("cabecera que miente", envelope(theme_bytes, [image()], {"tema": len(theme_bytes), "capturas": [999999]}))
+rejected("datos de más al final", envelope(theme_bytes, [image()], extra=b"secreto"))
+rejected("cabecera inválida", envelope(theme_bytes, [], {"tema": -5, "capturas": []}))
+rejected("cabecera con tipos raros", envelope(theme_bytes, [], {"tema": True, "capturas": "x"}))
+
 if len(sys.argv) > 1:
     out = tempfile.mkdtemp(dir=TMP)
     info = v.validate(sys.argv[1], out)
