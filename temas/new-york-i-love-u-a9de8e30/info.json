@@ -1,0 +1,22 @@
+{
+  "id": "new-york-i-love-u-a9de8e30",
+  "nombre": "New York I Love U",
+  "autor": "Nuan",
+  "archivo": "new-york-i-love-u.dthmp",
+  "bytes": 707284,
+  "colores": 134,
+  "imagenes": [
+    "general.jpg",
+    "previews.jpg"
+  ],
+  "capturas": 1,
+  "muestra": [
+    "#120d0b",
+    "#17100e",
+    "#f47446",
+    "#f47446",
+    "#f0e5e1",
+    "#30ed5f"
+  ],
+  "fecha": "2026-11-01"
+}
