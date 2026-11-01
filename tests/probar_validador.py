@@ -117,6 +117,12 @@ with open(evil_info, "w", encoding="utf-8") as f:
 body = subprocess.run([sys.executable, os.path.join(HERE, "tools", "cuerpo_pr.py"), evil_info, "a/b", "tema/x"], capture_output=True, text=True, encoding="utf-8")
 check("el texto no permite enlaces, imágenes ni menciones", "evil)" not in body.stdout and "](" not in body.stdout.split("|", 1)[1] and "@" not in body.stdout)
 
+out = tempfile.mkdtemp(dir=TMP)
+info = v.validate(path, out, "  <b>Nick</b> " + "x" * 50)
+check("el nick se limpia y se recorta", info["autor"] == "bNick/b " + "x" * 22)
+out = tempfile.mkdtemp(dir=TMP)
+check("sin nick no queda el autor del archivo", v.validate(package(BASE + [("imagenes/general.jpg", image())]), out)["autor"] == "")
+
 if len(sys.argv) > 1:
     out = tempfile.mkdtemp(dir=TMP)
     info = v.validate(sys.argv[1], out)

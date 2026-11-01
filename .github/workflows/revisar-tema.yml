@@ -4,7 +4,7 @@
 #   - descargar: tiene permiso de escritura para leer el borrador, y nunca abre el archivo.
 #   - validar: abre el archivo con el código de main, sin secretos ni permisos de escritura.
 #   - crear-pr: usa solo lo que dejó el validador.
-#   - limpiar: borra el archivo del buzón, pase lo que pase.
+#   - limpiar: borra el archivo del buzón, pase lo que pase, y deja el estado para la página.
 name: Revisar tema
 
 on:
@@ -13,6 +13,9 @@ on:
       archivo:
         description: "Nombre del archivo en el borrador buzon"
         required: true
+      nick:
+        description: "Nick de quien lo sube (opcional)"
+        required: false
   repository_dispatch:
     types: [tema-subido]
 
@@ -25,6 +28,7 @@ jobs:
       contents: write
     outputs:
       asset_id: ${{ steps.buscar.outputs.asset_id }}
+      release_id: ${{ steps.buscar.outputs.release_id }}
     steps:
       - name: Buscar el archivo en el buzón
         id: buscar
@@ -44,6 +48,7 @@ jobs:
           SIZE=$(printf '%s' "$ASSET" | jq -r .size)
           ID=$(printf '%s' "$ASSET" | jq -r .id)
           echo "asset_id=$ID" >> "$GITHUB_OUTPUT"
+          echo "release_id=$(jq -r '[.[] | select(.tag_name == "buzon" and .draft)][0].id' releases.json)" >> "$GITHUB_OUTPUT"
           if [ "$SIZE" -gt 20971520 ]; then
             echo "Pasa de 20 MB"; exit 1
           fi
@@ -74,8 +79,11 @@ jobs:
           name: entrada
           path: entrada
       - name: Validar
-        run: python tools/validar_tema.py entrada/tema.bin salida
+        env:
+          NICK: ${{ github.event.inputs.nick || github.event.client_payload.nick }}
+        run: python tools/validar_tema.py entrada/tema.bin salida "$NICK"
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: salida
           path: salida
@@ -127,9 +135,43 @@ jobs:
     permissions:
       contents: write
     steps:
-      - name: Borrar el archivo del buzón
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: salida
+          path: salida
+      - name: Dejar el estado
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RELEASE_ID: ${{ needs.descargar.outputs.release_id }}
+          ARCHIVO: ${{ github.event.inputs.archivo || github.event.client_payload.archivo }}
+          PR_RESULT: ${{ needs.crear-pr.result }}
+        run: |
+          if ! printf '%s' "$ARCHIVO" | grep -Eq '^tema-[A-F0-9]{8}\.bin$'; then
+            echo "Subida manual, sin código"; exit 0
+          fi
+          CODIGO=${ARCHIVO#tema-}; CODIGO=${CODIGO%.bin}
+          if [ -f salida/rechazo.txt ]; then
+            jq -n --rawfile m salida/rechazo.txt '{estado: "rechazado", motivo: $m}' > estado.json
+          elif [ -f salida/info.json ] && [ "$PR_RESULT" = "success" ]; then
+            jq '{estado: "revision", tema: .id}' salida/info.json > estado.json
+          else
+            echo '{"estado":"error"}' > estado.json
+          fi
+          curl -sS --fail -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/json" \
+            --data-binary @estado.json \
+            "https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=estado-$CODIGO.json" > /dev/null
+      - name: Borrar el archivo y los estados de hace más de 30 días
+        if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           REPO: ${{ github.repository }}
           ASSET_ID: ${{ needs.descargar.outputs.asset_id }}
-        run: gh api -X DELETE "repos/$REPO/releases/assets/$ASSET_ID"
+          RELEASE_ID: ${{ needs.descargar.outputs.release_id }}
+        run: |
+          gh api -X DELETE "repos/$REPO/releases/assets/$ASSET_ID"
+          LIMITE=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ)
+          gh api "repos/$REPO/releases/$RELEASE_ID/assets" --paginate \
+            --jq ".[] | select((.name | startswith(\"estado-\")) and .created_at < \"$LIMITE\") | .id" |
+            while read -r VIEJO; do gh api -X DELETE "repos/$REPO/releases/assets/$VIEJO"; done

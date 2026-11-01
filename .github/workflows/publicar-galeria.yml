@@ -1,0 +1,33 @@
+# Al aprobar un tema (fusionar su pull request), publica la lista que lee la página de DowP.
+name: Publicar galería
+
+on:
+  push:
+    branches: [main]
+    paths: ["temas/**", "tools/generar_galeria.py", ".github/workflows/publicar-galeria.yml"]
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: galeria
+  cancel-in-progress: true
+
+jobs:
+  publicar:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: python3 tools/generar_galeria.py _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - uses: actions/deploy-pages@v4
