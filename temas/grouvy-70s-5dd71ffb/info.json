@@ -1,0 +1,21 @@
+{
+  "id": "grouvy-70s-5dd71ffb",
+  "nombre": "Grouvy 70s",
+  "autor": "Franjec",
+  "archivo": "grouvy-70s.dthmp",
+  "bytes": 34872,
+  "colores": 134,
+  "imagenes": [
+    "general.jpg"
+  ],
+  "capturas": 1,
+  "muestra": [
+    "#1a100a",
+    "#20140c",
+    "#e8782a",
+    "#ec8330",
+    "#f4e4c1",
+    "#9cc63e"
+  ],
+  "fecha": "2026-11-06"
+}
