@@ -1,0 +1,19 @@
+{
+  "id": "got-blue-8e491ac0",
+  "nombre": "GOT BLUE",
+  "autor": "visco",
+  "archivo": "got-blue.json",
+  "bytes": 8674,
+  "colores": 134,
+  "imagenes": [],
+  "capturas": 1,
+  "muestra": [
+    "#1f262c",
+    "#222b31",
+    "#7398b0",
+    "#6e94ad",
+    "#e3e9ee",
+    "#52cb71"
+  ],
+  "fecha": "2026-11-07"
+}
