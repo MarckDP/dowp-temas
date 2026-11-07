@@ -1,0 +1,508 @@
+{
+  "meta": {
+    "nombre": "GOT  BOARDS",
+    "autor": "visco",
+    "version": "1.0",
+    "formato": 2
+  },
+  "colores": {
+    "fondo_principal": [
+      "#fcfaf8",
+      "#120e0b"
+    ],
+    "fondo_secundario": [
+      "#f7f4f1",
+      "#17120e"
+    ],
+    "fondo_terciario": [
+      "#f5f0ed",
+      "#1a1410"
+    ],
+    "panel_fondo": [
+      "#f4eeea",
+      "#1b1511"
+    ],
+    "fondo_elemento": [
+      "#f8f5f2",
+      "#1c1612"
+    ],
+    "texto_principal": [
+      "#261c14",
+      "#f0e7e1"
+    ],
+    "texto_secundario": [
+      "#a89689",
+      "#615248"
+    ],
+    "texto_deshabilitado": [
+      "#b7a79b",
+      "#4e3f35"
+    ],
+    "texto_activo": [
+      "#140d08",
+      "#fff9f5"
+    ],
+    "acento_primario": [
+      "#cc7333",
+      "#d68f5c"
+    ],
+    "acento_secundario": [
+      "#9c5827",
+      "#a85c26"
+    ],
+    "borde_normal": [
+      "#f0e9e4",
+      "#231c17"
+    ],
+    "borde_sutil": [
+      "#f1ebe7",
+      "#2e251f"
+    ],
+    "seleccion_fondo": [
+      "#f5e7dd",
+      "#3a271a"
+    ],
+    "seleccion_texto": [
+      "#b4652d",
+      "#e9b590"
+    ],
+    "badge_fondo": [
+      "#f0e9e4",
+      "#231c17"
+    ],
+    "badge_texto": [
+      "#a5551b",
+      "#db905a"
+    ],
+    "boton_fondo_inicio": [
+      "#cb8350",
+      "#d68f5c"
+    ],
+    "boton_fondo_fin": [
+      "#a75f2c",
+      "#a85c26"
+    ],
+    "boton_texto": "#1b130e",
+    "boton_solo_inicio": [
+      "#70a1ff",
+      "#00c6ff"
+    ],
+    "boton_solo_fin": [
+      "#1e90ff",
+      "#0072ff"
+    ],
+    "boton_solo_texto": "#ffffff",
+    "boton_importar_inicio": [
+      "#35c9b0",
+      "#35d6b8"
+    ],
+    "boton_importar_fin": [
+      "#087c70",
+      "#138f7d"
+    ],
+    "boton_importar_texto": [
+      "#ffffff",
+      "#001a16"
+    ],
+    "boton_descarga_inicio": [
+      "#d09d79",
+      "#e6ac82"
+    ],
+    "boton_descarga_fin": [
+      "#a75f2c",
+      "#b25f23"
+    ],
+    "boton_descarga_texto": "#1b130e",
+    "boton_descarga_running_inicio": [
+      "#cb8350",
+      "#d68f5c"
+    ],
+    "boton_descarga_running_fin": [
+      "#a75f2c",
+      "#a85c26"
+    ],
+    "boton_descarga_done_inicio": [
+      "#31ba63",
+      "#40d66b"
+    ],
+    "boton_descarga_done_fin": "#168f41",
+    "boton_descarga_error_inicio": [
+      "#e23653",
+      "#fb607a"
+    ],
+    "boton_descarga_error_fin": [
+      "#b30f2a",
+      "#bd0f2c"
+    ],
+    "boton_descarga_pausar_inicio": [
+      "#f39c12",
+      "#f5af19"
+    ],
+    "boton_descarga_pausar_fin": [
+      "#d35400",
+      "#e65100"
+    ],
+    "boton_descarga_pausar_texto": "#ffffff",
+    "tab_texto_inactivo": [
+      "#a89689",
+      "#615248"
+    ],
+    "tab_fondo_seleccionado": [
+      "#f7f4f1",
+      "#1a1410"
+    ],
+    "divisor": [
+      "#f0e9e4",
+      "#231c17"
+    ],
+    "titulo_settings": [
+      "#a5551b",
+      "#bf6a2d"
+    ],
+    "divisor_settings": [
+      "#ca814c",
+      "#7f3c0c"
+    ],
+    "boton_secundario_fondo": [
+      "#f5ece6",
+      "#3b281b"
+    ],
+    "boton_secundario_texto": [
+      "#a5551b",
+      "#db905a"
+    ],
+    "boton_secundario_hover": [
+      "#fdfcfb",
+      "#513a2a"
+    ],
+    "checkbox_fondo": [
+      "#fcfaf8",
+      "#17120e"
+    ],
+    "checkbox_borde": [
+      "#d5c8bf",
+      "#2e251f"
+    ],
+    "checkbox_checked": [
+      "#ca814c",
+      "#db905a"
+    ],
+    "progreso_fondo": [
+      "#fcfaf8",
+      "#15100d"
+    ],
+    "progreso_inicio": [
+      "#cb8350",
+      "#d68f5c"
+    ],
+    "progreso_fin": [
+      "#9c5827",
+      "#804419"
+    ],
+    "progreso_texto": [
+      "#261c14",
+      "#fff9f5"
+    ],
+    "estado_espera": [
+      "#827063",
+      "#b0a399"
+    ],
+    "estado_exito": [
+      "#198f37",
+      "#40dd68"
+    ],
+    "estado_aviso": [
+      "#8f6c19",
+      "#e2b95a"
+    ],
+    "estado_parcial": [
+      "#c45f00",
+      "#ff9a3c"
+    ],
+    "estado_error": [
+      "#ba213b",
+      "#e67084"
+    ],
+    "estado_progreso": [
+      "#1f72ad",
+      "#67b0e4"
+    ],
+    "boton_fragmentos_inicio": [
+      "#e85b50",
+      "#ff6b5f"
+    ],
+    "boton_fragmentos_fin": [
+      "#e07b00",
+      "#FF8C00"
+    ],
+    "boton_fragmentos_texto": "#ffffff",
+    "etiqueta_combinado": "#3498db",
+    "etiqueta_multi_idioma": "#9b59b6",
+    "etiqueta_estrella": "#f1c40f",
+    "etiqueta_peligro": "#e74c3c",
+    "ajedrez_c1": [
+      "#e5dcd5",
+      "#28201b"
+    ],
+    "ajedrez_c2": [
+      "#d1c4bb",
+      "#1b1511"
+    ],
+    "consola_fondo": "#000000",
+    "consola_texto": "#ffffff",
+    "consola_debug": "#4da6ff",
+    "consola_advertencia": "#ffd60a",
+    "consola_error": "#ff6b5f",
+    "consola_critico": "#ff1744",
+    "combo_flecha_fondo": [
+      "rgba(0, 0, 0, 0.06)",
+      "rgba(0, 0, 0, 0.4)"
+    ],
+    "tarjeta_fondo": [
+      "rgba(0, 0, 0, 0.025)",
+      "rgba(255, 255, 255, 0.035)"
+    ],
+    "resaltado_hover": [
+      "rgba(0, 0, 0, 0.05)",
+      "rgba(255, 255, 255, 0.05)"
+    ],
+    "texto_suave": [
+      "#5c4a3d",
+      "#c9b9ae"
+    ],
+    "texto_clave": [
+      "#cc7333",
+      "#e9b590"
+    ],
+    "texto_valor": [
+      "#261c14",
+      "#f0e8e2"
+    ],
+    "acento_audio": [
+      "#b4407f",
+      "#f5c2e7"
+    ],
+    "texto_titulo": [
+      "#201710",
+      "#f7efea"
+    ],
+    "texto_fuerte": [
+      "#2e221a",
+      "#ece3dd"
+    ],
+    "texto_medio": [
+      "#3d3026",
+      "#d8cec7"
+    ],
+    "texto_gris": [
+      "#5d4b3e",
+      "#b0a399"
+    ],
+    "texto_tenue": [
+      "#827063",
+      "#88796f"
+    ],
+    "borde_fuerte": [
+      "#c6b7ad",
+      "#4e3f35"
+    ],
+    "borde_campo": [
+      "#d5c8bf",
+      "#3e322a"
+    ],
+    "fondo_campo": [
+      "#fcfaf8",
+      "#201a15"
+    ],
+    "fondo_control": [
+      "#eee7e2",
+      "#28201b"
+    ],
+    "fondo_control_hover": [
+      "#e5dcd5",
+      "#352b23"
+    ],
+    "borde": [
+      "#ded2ca",
+      "#2a221c"
+    ],
+    "fondo_hover": [
+      "#eee7e2",
+      "#28201b"
+    ],
+    "borde_focus": [
+      "#cc7333",
+      "#d68f5c"
+    ],
+    "texto_primario": [
+      "#140d08",
+      "#fff9f5"
+    ],
+    "texto_apagado": [
+      "#9a887b",
+      "#75665b"
+    ],
+    "tarjeta_destacada_inicio": [
+      "#f7f3f0",
+      "#261f1a"
+    ],
+    "tarjeta_destacada_fin": [
+      "#f1ebe7",
+      "#1f1915"
+    ],
+    "tarjeta_destacada_borde": [
+      "#e0d5cd",
+      "#362c25"
+    ],
+    "tarjeta_futura_fondo": [
+      "#f7f3f0",
+      "#1b1511"
+    ],
+    "onda_fondo": [
+      "#f3ede9",
+      "#140f0c"
+    ],
+    "onda_cuadricula": [
+      "#dcd0c8",
+      "#2e251f"
+    ],
+    "onda_cuadricula_fuerte": [
+      "#c8b9af",
+      "#3e322a"
+    ],
+    "onda_barra": [
+      "#e8dfd9",
+      "#271f1a"
+    ],
+    "onda_linea": [
+      "#d1c4bb",
+      "#362c25"
+    ],
+    "cabezal": [
+      "#261c14",
+      "#fff9f5"
+    ],
+    "contorno_marcador": [
+      "#fcfaf8",
+      "#18130f"
+    ],
+    "pista_slider": [
+      "#d7cbc3",
+      "#382e26"
+    ],
+    "icono_tenue": [
+      "#a49285",
+      "#77685e"
+    ],
+    "barra_scroll_fondo": [
+      "#eae1db",
+      "#231c17"
+    ],
+    "barra_scroll_tirador": [
+      "#c1b2a7",
+      "#4e3f35"
+    ],
+    "boton_marca_entrada": [
+      "#e3f5e5",
+      "#1a271a"
+    ],
+    "boton_marca_salida": [
+      "#f8e3e3",
+      "#2b1a1a"
+    ],
+    "cabecera_dialogo": [
+      "#f3ede9",
+      "#140f0c"
+    ],
+    "borde_muestra_color": [
+      "#3d3026",
+      "#fff9f5"
+    ],
+    "flecha_control": [
+      "#5d4b3e",
+      "#ddd3cc"
+    ],
+    "boton_neutro_fondo": [
+      "#ebe3dd",
+      "#2e251f"
+    ],
+    "boton_neutro_borde": [
+      "#d1c4bb",
+      "#44372e"
+    ],
+    "boton_neutro_hover": [
+      "#e2d8d1",
+      "#372d25"
+    ],
+    "fondo_miniatura": [
+      "#f0e9e4",
+      "#191410"
+    ],
+    "tarjeta_lista_fondo": [
+      "#f7f3f0",
+      "#1a1511"
+    ],
+    "tarjeta_lista_borde": [
+      "#e3d9d2",
+      "#2b231d"
+    ],
+    "titulo_boton_hover": [
+      "#f0e6df",
+      "#3a2a1e"
+    ],
+    "titulo_boton_pulsado": [
+      "#e6d9cf",
+      "#302116"
+    ],
+    "titulo_cerrar_hover": [
+      "#f6d4d4",
+      "#4a1010"
+    ],
+    "titulo_cerrar_pulsado": [
+      "#eebcbc",
+      "#3a0a0a"
+    ],
+    "icono_vacio": [
+      "#cec1b7",
+      "#3e322a"
+    ],
+    "boton_acento_texto": [
+      "#ffffff",
+      "#1b130e"
+    ],
+    "switch_apagado": [
+      "#ded2ca",
+      "#2e251f"
+    ],
+    "switch_borde": [
+      "#c8b9af",
+      "#3e322a"
+    ],
+    "switch_perilla": [
+      "#fcfaf8",
+      "#fff9f5"
+    ],
+    "icono_principal": [
+      "#44352b",
+      "#f1e9e4"
+    ],
+    "miniatura_relleno_fondo": [
+      "#efe8e3",
+      "#1f1914"
+    ],
+    "miniatura_relleno_borde": [
+      "#ded2ca",
+      "#2c231d"
+    ]
+  },
+  "formas": {
+    "radio": 6,
+    "radio_chico": 4,
+    "radio_grande": 8,
+    "borde": 1
+  },
+  "tipografia": {
+    "tamano": 13,
+    "familia": "JetBrains Mono"
+  }
+}
