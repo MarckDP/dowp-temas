@@ -1,0 +1,21 @@
+{
+  "id": "mdb-retro-46dc2984",
+  "nombre": "MDB-Retro",
+  "autor": "Franjec",
+  "archivo": "mdb-retro.dthmp",
+  "bytes": 17689,
+  "colores": 134,
+  "imagenes": [
+    "general.jpg"
+  ],
+  "capturas": 3,
+  "muestra": [
+    "#2c251f",
+    "#312922",
+    "#c19971",
+    "#c19971",
+    "#eee8e3",
+    "#4cd16d"
+  ],
+  "fecha": "2026-11-07"
+}
